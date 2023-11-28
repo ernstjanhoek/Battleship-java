@@ -5,25 +5,11 @@ import java.util.Scanner;
 public class Main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
-        Game game = new Game(
-                new Player(new Field(10, 10)),
-                new Player(new Field(10, 10))
-        );
+        Game game = new Game();
         for (int i = 0; i < 2; i++) {
-            String message;
-            if (game.activePlayer == Game.ActivePlayer.PLAYER_1 ) {
-                message = game.activePlayer.getPlayer() + ", place your ships on the game field\n";
-            } else {
-                message = game.activePlayer.getPlayer() + ", place your ships to the game field\n";
-            }
-            System.out.println(message);
-            Player activePlayer;
-            if (game.activePlayer == Game.ActivePlayer.PLAYER_1) {
-                activePlayer = game.playerOneData;
-            } else {
-                activePlayer = game.playerTwoData;
-            }
-            System.out.println(activePlayer.field.displayField(Field.DisplayEnum.OPEN));
+            System.out.println(game.activePlayer.getPlayer() + ", place your ships to the game field\n");
+            Player activePlayer = new Player(new Field(10, 10));
+            System.out.println(activePlayer.getField().displayField(Field.DisplayEnum.OPEN));
             ShipType[] fleet = {
                     new ShipType(5, "Aircraft Carrier"),
                     new ShipType(4, "Battleship"),
@@ -38,8 +24,8 @@ public class Main {
                 while (!shipPlaced) {
                     try {
                         shipData.scanCoordinates(scanner);
-                        activePlayer.field.placeShip(shipData);
-                        System.out.println(activePlayer.field.displayField(Field.DisplayEnum.OPEN));
+                        activePlayer.getField().placeShip(shipData);
+                        System.out.println(activePlayer.getField().displayField(Field.DisplayEnum.OPEN));
                         activePlayer.increaseHealth(ship.length());
                         shipPlaced = true;
                     } catch (Exception e) {
@@ -47,28 +33,19 @@ public class Main {
                     }
                 }
             }
+            game.setActivePlayerData(activePlayer);
             game.transitionPlayer();
             System.out.println("Press Enter and pass the move to another player\n...");
             Main.magicRead(scanner);
         }
-
-        Player activePlayer;
-        Player otherPlayer;
-        while (game.playerOneData.getHealth() > 0 && game.playerTwoData.getHealth() > 0) {
-            if (game.activePlayer == Game.ActivePlayer.PLAYER_1) {
-                activePlayer = game.playerOneData;
-                otherPlayer = game.playerTwoData;
-            } else {
-                activePlayer = game.playerTwoData;
-                otherPlayer = game.playerOneData;
-            }
-            System.out.print(otherPlayer.field.displayField(Field.DisplayEnum.FOW));
+        while (game.getActivePlayerData().getHealth() > 0 ) {
+            System.out.print(game.getOtherPlayerData().getField().displayField(Field.DisplayEnum.FOW));
             System.out.println("---------------------");
-            System.out.println(activePlayer.field.displayField(Field.DisplayEnum.OPEN));
+            System.out.println(game.getActivePlayerData().getField().displayField(Field.DisplayEnum.OPEN));
             System.out.println(game.activePlayer.getPlayer() + ", it's your turn:");
             try {
                 System.out.println("Take a shot!");
-                Field.FireResultEnum hit = otherPlayer.field.fire(scanner, otherPlayer);
+                Field.FireResultEnum hit = game.getOtherPlayerData().getField().fire(scanner, game.getOtherPlayerData());
                 switch (hit) {
                     case HIT:
                         System.out.println("You hit a ship!");
@@ -77,7 +54,7 @@ public class Main {
                         System.out.println("You missed!");
                         break;
                     case DESTROYED:
-                        if (otherPlayer.getHealth() == 0) {
+                        if (game.getOtherPlayerData().getHealth() == 0) {
                             System.out.println("You sank the last ship. You won. Congratulations!");
                         } else {
                             System.out.println("You sank a ship! Specify a new target:");
@@ -93,12 +70,8 @@ public class Main {
         }
     }
     static void magicRead(Scanner scanner) {
-        try {
-            System.in.read();
             scanner.nextLine();
-        } catch (Exception e) {
             scanner.nextLine();
-        }
     }
 }
 class CoordinateException extends Exception {
@@ -108,14 +81,12 @@ class CoordinateException extends Exception {
     }
 }
 class ShipLocationException extends Exception {
-
     @Override
     public String getMessage() {
         return "Error! Wrong ship location! Try again:";
     }
 }
 class ShipProximityException extends Exception {
-
     @Override
     public String getMessage() {
         return "Error! You placed it too close to another one. Try again:";
@@ -130,10 +101,66 @@ class ShipLengthException extends Exception {
         return message;
     }
 }
+record ShipType(int length, String name) { }
+class ShipData {
+    private char yStart;
+    private char yEnd;
+    private int xStart;
+    private int xEnd;
+    private final int length;
+    private final String name;
+    ShipData(ShipType ship)  {
+        this.name = ship.name();
+        this.length = ship.length();
+    }
+    /*
+    Toevoegen dat coordinaten van ook van grotere waarde naar lagere waarde ingevoerd kunnen worden: bv. A8 A6
+     */
+    public void scanCoordinates(Scanner scanner) throws CoordinateException {
+        try {
+            String input0 = scanner.next();
+            this.yStart = input0.charAt(0);
+            String subString0 = input0.substring(1);
+            this.xStart = Integer.parseInt(subString0);
+
+            String input1 = scanner.next();
+            this.yEnd = input1.charAt(0);
+            String subString1 = input1.substring(1);
+            this.xEnd = Integer.parseInt(subString1);
+        } catch(Exception e) {
+            throw new CoordinateException();
+        }
+    }
+    public String placementMessage() {
+        return 	"Enter the coordinates of the " + this.name +" (" + this.length + " cells):";
+    }
+    /*
+    checkLength met 3 values en name string checkt of de lengte van de boot overeenkomt met ingevoerde coordinaten
+     */
+    public void checkLength() throws ShipLengthException {
+        int yAbsolute = Math.abs((this.yStart - this.yEnd)) + 1; // voeg 1 toe omdat vanwege index nummmers/ lengte gevraagd
+        int xAbsolute = Math.abs((this.xStart - this.xEnd)) + 1;
+        if (!(yAbsolute == this.length || xAbsolute == this.length)) {
+            throw new ShipLengthException(this.name);
+        }
+    }
+    public char getyStart() {
+        return yStart;
+    }
+    public char getyEnd() {
+        return yEnd;
+    }
+    public int getxStart() {
+        return xStart;
+    }
+    public int getxEnd() {
+        return xEnd;
+    }
+}
 class Field  {
-    PointState[][] fieldArray;
-    int yTarget = 0;
-    int xTarget = 0;
+    private final PointState[][] fieldArray;
+    private int yTarget = 0;
+    private int xTarget = 0;
     public Field(int x_length, int y_length) {
         this.fieldArray = new PointState[y_length][x_length];
         for (int y = 0; y < y_length; y++ ) {
@@ -189,25 +216,24 @@ class Field  {
             throw new Exception(e.getMessage());
         }
     }
-
     /*
     checkInput met 4 values checkt of de start en eind coordinate  van de boot 1-dimensionaal zijn
     en of boot niet diagonaal geplaatst wordt? dus bij exception throws ShipLocationException
      */
-    private void checkInput(int charValue0, int charValue1, int intValue0, int intValue1) throws ShipLocationException {
-        if (charValue0 != charValue1 && intValue0 != intValue1) {
+    private void checkInput(int yValue0, int yValue1, int xValue0, int xValue1) throws ShipLocationException {
+        if (yValue0 != yValue1 && xValue0 != xValue1) {
             throw new ShipLocationException();
         }
     }
     /*
     checkProximity kijkt of er geen boten rondom de te plaatsen boot liggen
      */
-    private void checkProximity(int charValue0, int charValue1, int intValue0, int intValue1) throws ShipProximityException {
+    private void checkProximity(int yValue0, int yValue1, int xValue0, int xValue1) throws ShipProximityException {
         int padding = 1;
-        int yStartClamped = Math.max(charValue0 - padding, 0);
-        int yEndClamped =  Math.min(charValue1 + padding, intToIndex(fieldArray.length));
-        int xStartClamped = Math.max(intValue0 - padding, 0);
-        int xEndClamped = Math.min(intValue1 + padding, intToIndex(fieldArray[0].length));
+        int yStartClamped = Math.max(yValue0 - padding, 0);
+        int yEndClamped =  Math.min(yValue1 + padding, intToIndex(fieldArray.length));
+        int xStartClamped = Math.max(xValue0 - padding, 0);
+        int xEndClamped = Math.min(xValue1 + padding, intToIndex(fieldArray[0].length));
         for (int y = yStartClamped; y <= yEndClamped; y++) {
             for (int x = xStartClamped; x <= xEndClamped; x++) {
                 if (fieldArray[y][x] == PointState.SHIP) {
@@ -231,9 +257,9 @@ class Field  {
         }
     }
     public FireResultEnum fire(Scanner scanner, Player player) throws CoordinateException {
-        scanCoordinate(scanner);
-        PointState pointValue = fieldArray[this.yTarget][this.xTarget];
         try {
+            scanCoordinate(scanner);
+            PointState pointValue = fieldArray[this.yTarget][this.xTarget];
             if (pointValue == PointState.SHIP) {
                 this.assignCoordinateValue(this.yTarget, this.xTarget, PointState.SUNK);
                 player.decreaseHealth();
@@ -309,7 +335,7 @@ class Field  {
         return switch (point) {
             case EMPTY, MISSED -> true;
             case SUNK -> false;
-            default -> throw new Exception();
+            case SHIP -> throw new Exception();
         };
     }
     private int intToIndex(int value) {
@@ -357,65 +383,13 @@ class Field  {
         OPEN, FOW
     }
 }
-record ShipType(int length, String name) {
-}
-class ShipData {
-    private char yStart;
-    private char yEnd;
-    private int xStart;
-    private int xEnd;
-    private final int length;
-    private final String name;
-    ShipData(ShipType ship)  {
-        this.name = ship.name();
-        this.length = ship.length();
-    }
-    /*
-    Toevoegen dat coordinaten van ook van grotere waarde naar lagere waarde ingevoerd kunnen worden: bv. A8 A6
-     */
-    public void scanCoordinates(Scanner scanner) throws CoordinateException {
-        try {
-            String input0 = scanner.next();
-            this.yStart = input0.charAt(0);
-            String subString0 = input0.substring(1);
-            this.xStart = Integer.parseInt(subString0);
-
-            String input1 = scanner.next();
-            this.yEnd = input1.charAt(0);
-            String subString1 = input1.substring(1);
-            this.xEnd = Integer.parseInt(subString1);
-        } catch(Exception e) {
-            throw new CoordinateException();
-        }
-    }
-    public String placementMessage() {
-        return 	"Enter the coordinates of the " + this.name +" (" + this.length + " cells):";
-    }
-    /*
-    checkLength met 3 values en name string checkt of de lengte van de boot overeenkomt met ingevoerde coordinaten
-     */
-    public void checkLength() throws ShipLengthException {
-        int yAbsolute = Math.abs((this.yStart - this.yEnd)) + 1; // voeg 1 toe omdat vanwege index nummmers/ lengte gevraagd
-        int xAbsolute = Math.abs((this.xStart - this.xEnd)) + 1;
-        if (!(yAbsolute == this.length || xAbsolute == this.length)) {
-            throw new ShipLengthException(this.name);
-        }
-    }
-    public char getyStart() {
-        return yStart;
-    }
-    public char getyEnd() {
-        return yEnd;
-    }
-    public int getxStart() {
-        return xStart;
-    }
-    public int getxEnd() {
-        return xEnd;
-    }
-}
 class Player {
-    public Field field;
+    private final Field field;
+
+    public Field getField() {
+        return field;
+    }
+
     private int health;
     Player(Field field) {
         this.field = field;
@@ -431,14 +405,41 @@ class Player {
     }
 }
 class Game {
-    Game(Player playerOne, Player playerTwo) {
+    Game() {
         this.activePlayer = ActivePlayer.PLAYER_1;
-        this.playerOneData = playerOne;
-        this.playerTwoData = playerTwo;
     }
-    Player playerOneData;
-    Player playerTwoData;
+    private Player playerOneData;
+    private Player playerTwoData;
     ActivePlayer activePlayer;
+    public Player getActivePlayerData() {
+        if (activePlayer == ActivePlayer.PLAYER_1) {
+            return this.playerOneData;
+        } else {
+            return this.playerTwoData;
+        }
+    }
+    public Player getOtherPlayerData() {
+        if (activePlayer == ActivePlayer.PLAYER_1) {
+            return this.playerTwoData;
+        } else {
+            return this.playerOneData;
+        }
+    }
+    public void setActivePlayerData(Player playerData) {
+        if (activePlayer == ActivePlayer.PLAYER_1) {
+            this.playerOneData = playerData;
+        } else {
+            this.playerTwoData = playerData;
+        }
+
+    }
+    public void setOtherPlayerData(Player playerData) {
+        if (activePlayer == ActivePlayer.PLAYER_1) {
+            this.playerTwoData = playerData;
+        } else {
+            this.playerOneData = playerData;
+        }
+    }
     public void transitionPlayer() {
         switch (this.activePlayer) {
             case PLAYER_1:
