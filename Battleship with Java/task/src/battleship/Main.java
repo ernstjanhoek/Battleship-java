@@ -181,15 +181,16 @@ class Field  {
             Programma verwerkt in for loops van komende functies de coordinaten van input van laag naar
             hoog. Als het eerst ingevoerde coordinaat [yAxisStart, xAxisStart] hogere waardes heeft dan
             het tweede ingevoerde coordinaat [yAxisEnd, xAxisEnd], dan werkt het programma niet.
-            De vermenigvuldiging van de waardes van de coordinaten bepaalt of een coordinaat hogere
-            waardes heeft dan een ander. Als de beide vermenigvuldigingen ongelijk zijn, is er sprake van
-            een ongeldige coordinaat:
+            Door de x en y coordinaten met elkaar te vermenigvuldigen en de uitkomsten met elkaar te vergelijken is voor ieder coordinatenpaar te bepalen
+            of deze 'groter' (meer naar links en naar onderen) dan een ander. Dit werkt voor zowel paartjes in de y- als x-lengte.
+            Als de beide vermenigvuldigingen gelijk zijn, dan is er sprake van een ongeldig coordinaat:
                1  2  3  4  5
             A  1  2  3  4  5
             B  2  4  6  8  10
             C  3  6  9  12 15
             D  4  8  12 16 20
             E  5  10 15 20 25
+            (Ongeldige coordinaten worden met checkInput methods later eruit gefilterd)
              */
             if (multipliedCoord0 <= multipliedCoord1) {
                 yAxisStart = charToIndex(ship.getyStart());
