@@ -2,7 +2,7 @@ package battleship;
 
 import java.util.Scanner;
 
-public class Main {
+    public class Main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
         Game game = new Game();
@@ -295,7 +295,7 @@ class Field  {
         /* Check met loop of velden in bepaalde richting SUNK('X'), SHIP('O'),of MISSED('X')/EMPTY('~') zijn.
         Bij MISSED of EMPTY: Stop met zoeken in die richting.
         Bij SUNK: Blijf zoeken in die richting.
-        Bij SHIP: Stop met zoeken in alle richtingen en return false;
+        Bij SHIP: Stop met zoeken in alle richtingen: throw exception en return false ;
         Als er geen loops meer lopen (in alle richtingen is EMPTY gevonden): return true;
         Clamp loops tussen 0(min index) en intToIndex(fielArray.length)(max index)
          */
@@ -389,7 +389,6 @@ class Player {
     public Field getField() {
         return field;
     }
-
     private int health;
     Player(Field field) {
         this.field = field;
@@ -433,6 +432,7 @@ class Game {
         }
 
     }
+    @SuppressWarnings("unused")
     public void setOtherPlayerData(Player playerData) {
         if (activePlayer == ActivePlayer.PLAYER_1) {
             this.playerTwoData = playerData;
